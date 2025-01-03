@@ -5,20 +5,20 @@ const categoriesSchema = new mongoose.Schema({
     {
       type: String,
       enum: [
-        "Men",
-        "Women",
-        "Kids",
-        "Electronics",
-        "Home",
-        "Sports",
-        "Books",
-        "Beauty",
-        "Health",
-        "Toys",
-        "Food",
-        "Pets",
-        "Travel",
-        "Other"
+        "men",
+        "women",
+        "kids",
+        "electronics",
+        "home",
+        "sports",
+        "books",
+        "beauty",
+        "health",
+        "toys",
+        "food",
+        "pets",
+        "travel",
+        "other"
       ]
     }
   ],         
