@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const mongoose = require('mongoose');
 
 const corsOptions = {
   origin: "*",
@@ -11,6 +12,7 @@ app.use(cors(corsOptions));
 
 const { initializeDatabase } = require("./db/db.connect");
 const Product = require("./models/product.models");
+const Wishlist = require("./models/wishlist.models");
 
 app.use(express.json());
 
@@ -200,6 +202,82 @@ app.get('/categories/:categoryId', async (req, res) => {
     return res.status(500).json({ error: 'Failed to fetch category data.' });
   }
 });
+
+
+async function readWishlist() {
+  try {
+    const wishlist = await Wishlist.findOne().populate("items.productId");
+    return wishlist;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Assuming Express setup is done
+app.get("/wishlist", async (req, res) => {
+  try {
+    const wishlist = await readWishlist();  // Use the separate function
+    if (!wishlist) {
+      return res.status(404).json({ error: "Wishlist not found." });
+    }
+    res.json(wishlist); // Send the wishlist as JSON
+  } catch (error) {
+    console.error("Error fetching wishlist:", error);
+    res.status(500).json({ error: "Failed to fetch wishlist." });
+  }
+});
+
+
+async function addToWishlist(productId) {
+  try {
+    // Find the first wishlist (or create one)
+    let wishlist = await Wishlist.findOne();
+
+    if (!wishlist) {
+      // If no wishlist exists, create a new one
+      wishlist = new Wishlist({
+        items: [{ productId }],
+      });
+    } else {
+      // If wishlist exists, add the product to the items
+      wishlist.items.push({ productId });
+    }
+
+    // Save the wishlist to the database
+    const savedWishlist = await wishlist.save();
+
+    // Return the saved wishlist object for confirmation
+    console.log("Updated Wishlist:", savedWishlist);
+    return savedWishlist;
+
+  } catch (error) {
+    console.error("Error adding product to wishlist:", error.message);
+    throw new Error("Failed to add product to wishlist.");
+  }
+}
+
+
+app.post("/wishlist", async (req, res) => {
+  try {
+    const { productId } = req.body;  // Get productId from the request body
+
+    if (!productId) {
+      return res.status(400).json({ error: "Product ID is required." });
+    }
+
+    const updatedWishlist = await addToWishlist(productId);
+
+    res.status(201).json({
+      message: "Product added to wishlist successfully!",
+      wishlist: updatedWishlist,
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to add product to wishlist." });
+  }
+});
+
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
