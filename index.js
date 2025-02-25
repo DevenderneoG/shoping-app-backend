@@ -277,7 +277,42 @@ app.post("/wishlist", async (req, res) => {
   }
 });
 
+async function removeFromWishlist(itemId) {
+  try {
+    const wishlist = await Wishlist.findOneAndUpdate(
+      {},
+      { $pull: { items: { _id: itemId } } }, // Remove item with specified _id from items array
+      { new: true } // Return the updated document
+    ).populate("items.productId");
 
+    if (!wishlist) {
+      throw new Error("Wishlist not found.");
+    }
+
+    console.log("Updated Wishlist after deletion:", wishlist);
+    return wishlist;
+  } catch (error) {
+    console.error("Error removing item from wishlist:", error.message);
+    throw error;
+  }
+}
+
+app.delete("/wishlist/:itemId", async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const updatedWishlist = await removeFromWishlist(itemId);
+    res.status(200).json({
+      message: "Item removed from wishlist successfully!",
+      wishlist: updatedWishlist,
+    });
+  } catch (error) {
+    if (error.message === "Wishlist not found.") {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Failed to remove item from wishlist." });
+    }
+  }
+});
 
 const PORT = 3000;
 app.listen(PORT, () => {
