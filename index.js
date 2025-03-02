@@ -14,6 +14,7 @@ app.use(cors(corsOptions));
 const { initializeDatabase } = require("./db/db.connect");
 const Product = require("./models/product.models");
 const Wishlist = require("./models/wishlist.models");
+const Cart = require("./models/cart.models");
 
 app.use(express.json());
 
@@ -281,61 +282,6 @@ app.post("/wishlist", async (req, res) => {
   }
 });
 
-// async function removeFromWishlist(itemId) {
-//   try {
-//     const wishlist = await wishlist.findByIdAndDelete(
-//       {},
-//       { $pull: { items: { _id: itemId } } },
-//       { new: true }
-//     ).populate("items.productId");
-
-//     if (!wishlist) {
-//       throw new Error("Wishlist not found.");
-//     }
-
-//     console.log("Updated Wishlist after deletion:", wishlist);
-//     return wishlist;
-//   } catch (error) {
-//     console.error("Error removing item from wishlist:", error.message);
-//     throw error;
-//   }
-// }
-
-// async function wishlistById (itemId) {
-//   try {
-//     const deleteWishList = await Wishlist.findByIdAndDelete(itemId);
-//     console.log(deleteWishList);
-//   } catch (error) {
-//     console.log("Error in Deleting WishList data", error)
-//   }
-// }
-
-// app.delete("/wishlist/:itemId", async (req, res) => {
-//   try {
-//     const deletedWishList = await wishlistById(req.params.itemId);
-//     if (deletedWishList) {
-//       res.status(200).json({message: "Wishlist deleted successfully."})
-//     }
-//   } catch (error) {
-//     res.status(500).json({error: "Failed to delete Wishlist."})
-//   }
-// })
-
-// async function wishlistById(itemId) {
-//   try {
-//     if (!ObjectId.isValid(itemId)) {
-//       throw new Error('Invalid Wishlist ID');
-//     }
-//     console.log('Searching for Wishlist ID:', itemId);
-//     const deletedWishlist = await Wishlist.findByIdAndDelete(itemId);
-//     console.log('Deleted Wishlist:', deletedWishlist);
-//     return deletedWishlist;
-//   } catch (error) {
-//     console.error('Error in wishlistById:', error.message);
-//     throw error;
-//   }
-// }
-
 app.delete('/wishlist/:wishlistId/item/:productId', async (req, res) => {
   try {
     const { wishlistId, productId } = req.params;
@@ -378,23 +324,171 @@ app.delete('/wishlist/:wishlistId/item/:productId', async (req, res) => {
   }
 });
 
+async function readCart() {
+  try {
+      const cart = await Cart.findOne().populate("items.productId");
+      return cart;
+  } catch (error) {
+      throw error;
+  }
+}
 
-// app.delete("/wishlist/:itemId", async (req, res) => {
-//   try {
-//     const { itemId } = req.params;
-//     const updatedWishlist = await removeFromWishlist(itemId);
-//     res.status(200).json({
-//       message: "Item removed from wishlist successfully!",
-//       wishlist: updatedWishlist,
-//     });
-//   } catch (error) {
-//     if (error.message === "Wishlist not found.") {
-//       res.status(404).json({ error: error.message });
-//     } else {
-//       res.status(500).json({ error: "Failed to remove item from wishlist." });
-//     }
-//   }
-// });
+app.get("/cart", async (req, res) => {
+  try {
+      const cart = await readCart();
+      if (!cart) {
+          return res.status(404).json({ error: "Cart not found." });
+      }
+      res.json(cart);
+  } catch (error) {
+      console.error("Error fetching cart:", error);
+      res.status(500).json({ error: "Failed to fetch cart." });
+  }
+});
+
+// Cart add function
+async function addToCart(productId, quantity = 1) {
+  try {
+      // Find the first cart (or create one)
+      let cart = await Cart.findOne();
+
+      if (!cart) {
+          // If no cart exists, create a new one
+          cart = new Cart({
+              items: [{ productId, quantity }],
+          });
+      } else {
+          // Check if product already exists in cart
+          const itemIndex = cart.items.findIndex(
+              item => item.productId.toString() === productId.toString()
+          );
+
+          if (itemIndex > -1) {
+              // If product exists, update quantity
+              cart.items[itemIndex].quantity += quantity;
+          } else {
+              // If product doesn't exist, add it
+              cart.items.push({ productId, quantity });
+          }
+      }
+
+      // Save the cart to the database
+      const savedCart = await cart.save();
+
+      // Return the saved cart object for confirmation
+      console.log("Updated Cart:", savedCart);
+      return savedCart;
+  } catch (error) {
+      console.error("Error adding product to cart:", error.message);
+      throw new Error("Failed to add product to cart.");
+  }
+}
+
+// POST Cart API endpoint
+app.post("/cart", async (req, res) => {
+  try {
+      const { productId, quantity } = req.body; // Get productId and quantity from request body
+
+      if (!productId) {
+          return res.status(400).json({ error: "Product ID is required." });
+      }
+
+      // Validate quantity if provided
+      const qty = quantity && !isNaN(quantity) && quantity > 0 ? quantity : 1;
+
+      const updatedCart = await addToCart(productId, qty);
+
+      res.status(201).json({
+          message: "Product added to cart successfully!",
+          cart: updatedCart,
+      });
+  } catch (error) {
+      res.status(500).json({
+          error: error.message || "Failed to add product to cart."
+      });
+  }
+});
+
+app.delete('/cart/:cartId/item/:productId', async (req, res) => {
+  try {
+      const { cartId, productId } = req.params;
+
+      console.log('DELETE request received - Cart ID:', cartId, 'Product ID:', productId);
+
+      if (!mongoose.Types.ObjectId.isValid(cartId) || !mongoose.Types.ObjectId.isValid(productId)) {
+          return res.status(400).json({ error: 'Invalid Cart ID or Product ID' });
+      }
+
+      const updatedCart = await Cart.findByIdAndUpdate(
+          cartId,
+          { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
+          { new: true }
+      ).populate('items.productId');
+
+      console.log('Updated Cart:', updatedCart);
+
+      if (!updatedCart) {
+          console.log('No cart found for ID:', cartId);
+          return res.status(404).json({ error: 'Cart not found' });
+      }
+
+      // Check if the item was removed
+      const itemStillExists = updatedCart.items.some(
+          item => item.productId.toString() === productId
+      );
+      if (itemStillExists) {
+          console.log('Item with Product ID:', productId, 'not removed from Cart:', cartId);
+          return res.status(404).json({ error: 'Product not found in cart or not removed' });
+      }
+
+      res.status(200).json({
+          message: 'Item removed from cart successfully',
+          updatedCart: updatedCart,
+      });
+  } catch (error) {
+      console.error('Error in DELETE cart route:', error.message);
+      res.status(500).json({ error: 'Failed to remove item from cart', details: error.message });
+  }
+});
+
+app.patch('/cart/:cartId/item/:productId', async (req, res) => {
+  try {
+      const { cartId, productId } = req.params;
+      const { quantity } = req.body;
+
+      console.log('PATCH request received - Cart ID:', cartId, 'Product ID:', productId, 'New Quantity:', quantity);
+
+      // Validate IDs and quantity
+      if (!mongoose.Types.ObjectId.isValid(cartId) || !mongoose.Types.ObjectId.isValid(productId)) {
+          return res.status(400).json({ error: 'Invalid Cart ID or Product ID' });
+      }
+
+      if (!quantity || isNaN(quantity) || quantity < 1) {
+          return res.status(400).json({ error: 'Quantity must be a number greater than 0' });
+      }
+
+      const updatedCart = await Cart.findOneAndUpdate(
+          { _id: cartId, 'items.productId': productId },
+          { $set: { 'items.$.quantity': quantity } },
+          { new: true }
+      ).populate('items.productId');
+
+      console.log('Updated Cart:', updatedCart);
+
+      if (!updatedCart) {
+          console.log('No cart found or item not in cart - Cart ID:', cartId, 'Product ID:', productId);
+          return res.status(404).json({ error: 'Cart or product not found' });
+      }
+
+      res.status(200).json({
+          message: 'Cart item quantity updated successfully',
+          updatedCart: updatedCart,
+      });
+  } catch (error) {
+      console.error('Error in PATCH cart route:', error.message);
+      res.status(500).json({ error: 'Failed to update cart item quantity', details: error.message });
+  }
+});
 
 const PORT = 3000;
 app.listen(PORT, () => {
