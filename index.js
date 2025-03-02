@@ -321,38 +321,20 @@ app.post("/wishlist", async (req, res) => {
 //   }
 // })
 
-async function wishlistById(itemId) {
-  try {
-    if (!ObjectId.isValid(itemId)) {
-      throw new Error('Invalid Wishlist ID');
-    }
-    console.log('Searching for Wishlist ID:', itemId);
-    const deletedWishlist = await Wishlist.findByIdAndDelete(itemId);
-    console.log('Deleted Wishlist:', deletedWishlist);
-    return deletedWishlist;
-  } catch (error) {
-    console.error('Error in wishlistById:', error.message);
-    throw error;
-  }
-}
-
-// app.delete('/wishlist/:itemId', async (req, res) => {
+// async function wishlistById(itemId) {
 //   try {
-//     console.log('DELETE request received for ID:', req.params.itemId);
-//     const deletedWishlist = await wishlistById(req.params.itemId);
-//     if (!deletedWishlist) {
-//       console.log('No wishlist found for ID:', req.params.itemId);
-//       return res.status(404).json({ error: 'Wishlist not found' });
+//     if (!ObjectId.isValid(itemId)) {
+//       throw new Error('Invalid Wishlist ID');
 //     }
-//     res.status(200).json({
-//       message: 'Wishlist deleted successfully',
-//       deletedData: deletedWishlist,
-//     });
+//     console.log('Searching for Wishlist ID:', itemId);
+//     const deletedWishlist = await Wishlist.findByIdAndDelete(itemId);
+//     console.log('Deleted Wishlist:', deletedWishlist);
+//     return deletedWishlist;
 //   } catch (error) {
-//     console.error('Error in DELETE route:', error.message);
-//     res.status(500).json({ error: 'Failed to delete wishlist', details: error.message });
+//     console.error('Error in wishlistById:', error.message);
+//     throw error;
 //   }
-// });
+// }
 
 app.delete('/wishlist/:wishlistId/item/:productId', async (req, res) => {
   try {
@@ -360,29 +342,30 @@ app.delete('/wishlist/:wishlistId/item/:productId', async (req, res) => {
 
     console.log('DELETE request received - Wishlist ID:', wishlistId, 'Product ID:', productId);
 
-    // Validate IDs
     if (!ObjectId.isValid(wishlistId) || !ObjectId.isValid(productId)) {
       return res.status(400).json({ error: 'Invalid Wishlist ID or Product ID' });
     }
 
-    // Update the wishlist by pulling the item with matching productId
     const updatedWishlist = await Wishlist.findByIdAndUpdate(
       wishlistId,
-      { $pull: { items: { productId: productId } } }, // Match and remove item by productId
-      { new: true } // Return the updated document
-    ).populate('items.productId'); // Populate product details
+      { $pull: { items: { productId: new ObjectId(productId) } } }, // Convert to ObjectId
+      { new: true }
+    ).populate('items.productId');
 
-    // Check if wishlist exists
+    console.log('Updated Wishlist:', updatedWishlist);
+
     if (!updatedWishlist) {
       console.log('No wishlist found for ID:', wishlistId);
       return res.status(404).json({ error: 'Wishlist not found' });
     }
 
-    // Check if the item was actually removed (optional validation)
-    const itemStillExists = updatedWishlist.items.some(item => item.productId.toString() === productId);
+    // Check if the item was removed
+    const itemStillExists = updatedWishlist.items.some(
+      (item) => item.productId.toString() === productId
+    );
     if (itemStillExists) {
-      console.log('Item with Product ID:', productId, 'not found in Wishlist:', wishlistId);
-      return res.status(404).json({ error: 'Product not found in wishlist' });
+      console.log('Item with Product ID:', productId, 'not removed from Wishlist:', wishlistId);
+      return res.status(404).json({ error: 'Product not found in wishlist or not removed' });
     }
 
     res.status(200).json({
