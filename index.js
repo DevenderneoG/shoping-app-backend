@@ -1,7 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+const mongoose = require("mongoose");
+const { ObjectId } = require("mongoose").Types;
 const app = express();
-const mongoose = require('mongoose');
 
 const corsOptions = {
   origin: "*",
@@ -24,7 +25,7 @@ initializeDatabase();
 //   description: "12 Main Road, Anytown",
 //   rating: 4.0,
 //   category: [],
-//   productImageURl: "https://sunset-example.com",//   
+//   productImageURl: "https://sunset-example.com",//
 // };
 
 async function createProduct(newProduct) {
@@ -37,15 +38,16 @@ async function createProduct(newProduct) {
   }
 }
 
-
 app.post("/products", async (req, res) => {
-try {
-  const savedProducts = await createProduct(req.body);
-  res.status(201).json({message: "Product Added successfully.", product: savedProducts})
-} catch (error) {
-  res.status(500).json({error: "Failed to add Product."})
-}
-})
+  try {
+    const savedProducts = await createProduct(req.body);
+    res
+      .status(201)
+      .json({ message: "Product Added successfully.", product: savedProducts });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to add Product." });
+  }
+});
 
 async function readAllProducts() {
   try {
@@ -117,9 +119,9 @@ async function getProductsByCategory() {
   try {
     // Fetch all products (you could apply additional filters if necessary)
     const products = await Product.find(); // This will return all products
-    
+
     // Extract distinct categories using a Set to filter duplicates
-    const categories = new Set(products.map(product => product.category));
+    const categories = new Set(products.map((product) => product.category));
 
     // Convert the Set to an array and return
     return Array.from(categories);
@@ -128,7 +130,7 @@ async function getProductsByCategory() {
   }
 }
 
-app.get('/categories', async (req, res) => {
+app.get("/categories", async (req, res) => {
   try {
     // Get distinct categories from the database
     const categories = await getProductsByCategory();
@@ -138,11 +140,11 @@ app.get('/categories', async (req, res) => {
       return res.status(200).json({ categories });
     } else {
       // If no categories are found
-      return res.status(404).json({ error: 'No categories found.' });
+      return res.status(404).json({ error: "No categories found." });
     }
   } catch (error) {
     // Handle any errors (e.g., database issues)
-    return res.status(500).json({ error: 'Failed to fetch categories.' });
+    return res.status(500).json({ error: "Failed to fetch categories." });
   }
 });
 
@@ -174,7 +176,9 @@ async function getCategoryData(categoryId) {
     const categoryData = await Product.find({ category: categoryId });
 
     if (categoryData.length === 0) {
-      throw new Error('Category not found or no products available for this category.');
+      throw new Error(
+        "Category not found or no products available for this category."
+      );
     }
 
     return categoryData;
@@ -183,7 +187,7 @@ async function getCategoryData(categoryId) {
   }
 }
 
-app.get('/categories/:categoryId', async (req, res) => {
+app.get("/categories/:categoryId", async (req, res) => {
   const { categoryId } = req.params; // Get categoryId from the URL parameter
 
   try {
@@ -194,15 +198,17 @@ app.get('/categories/:categoryId', async (req, res) => {
     return res.status(200).json({ data: { category: categoryData } });
   } catch (error) {
     // Handle errors: no products found, category not found, etc.
-    if (error.message === 'Category not found or no products available for this category.') {
+    if (
+      error.message ===
+      "Category not found or no products available for this category."
+    ) {
       return res.status(404).json({ error: error.message });
     }
 
     // Internal server error
-    return res.status(500).json({ error: 'Failed to fetch category data.' });
+    return res.status(500).json({ error: "Failed to fetch category data." });
   }
 });
-
 
 async function readWishlist() {
   try {
@@ -216,7 +222,7 @@ async function readWishlist() {
 // Assuming Express setup is done
 app.get("/wishlist", async (req, res) => {
   try {
-    const wishlist = await readWishlist();  // Use the separate function
+    const wishlist = await readWishlist(); // Use the separate function
     if (!wishlist) {
       return res.status(404).json({ error: "Wishlist not found." });
     }
@@ -226,7 +232,6 @@ app.get("/wishlist", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch wishlist." });
   }
 });
-
 
 async function addToWishlist(productId) {
   try {
@@ -249,17 +254,15 @@ async function addToWishlist(productId) {
     // Return the saved wishlist object for confirmation
     console.log("Updated Wishlist:", savedWishlist);
     return savedWishlist;
-
   } catch (error) {
     console.error("Error adding product to wishlist:", error.message);
     throw new Error("Failed to add product to wishlist.");
   }
 }
 
-
 app.post("/wishlist", async (req, res) => {
   try {
-    const { productId } = req.body;  // Get productId from the request body
+    const { productId } = req.body; // Get productId from the request body
 
     if (!productId) {
       return res.status(400).json({ error: "Product ID is required." });
@@ -271,13 +274,127 @@ app.post("/wishlist", async (req, res) => {
       message: "Product added to wishlist successfully!",
       wishlist: updatedWishlist,
     });
-
   } catch (error) {
-    res.status(500).json({ error: error.message || "Failed to add product to wishlist." });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to add product to wishlist." });
+  }
+});
+
+// async function removeFromWishlist(itemId) {
+//   try {
+//     const wishlist = await wishlist.findByIdAndDelete(
+//       {},
+//       { $pull: { items: { _id: itemId } } },
+//       { new: true }
+//     ).populate("items.productId");
+
+//     if (!wishlist) {
+//       throw new Error("Wishlist not found.");
+//     }
+
+//     console.log("Updated Wishlist after deletion:", wishlist);
+//     return wishlist;
+//   } catch (error) {
+//     console.error("Error removing item from wishlist:", error.message);
+//     throw error;
+//   }
+// }
+
+// async function wishlistById (itemId) {
+//   try {
+//     const deleteWishList = await Wishlist.findByIdAndDelete(itemId);
+//     console.log(deleteWishList);
+//   } catch (error) {
+//     console.log("Error in Deleting WishList data", error)
+//   }
+// }
+
+// app.delete("/wishlist/:itemId", async (req, res) => {
+//   try {
+//     const deletedWishList = await wishlistById(req.params.itemId);
+//     if (deletedWishList) {
+//       res.status(200).json({message: "Wishlist deleted successfully."})
+//     }
+//   } catch (error) {
+//     res.status(500).json({error: "Failed to delete Wishlist."})
+//   }
+// })
+
+// async function wishlistById(itemId) {
+//   try {
+//     if (!ObjectId.isValid(itemId)) {
+//       throw new Error('Invalid Wishlist ID');
+//     }
+//     console.log('Searching for Wishlist ID:', itemId);
+//     const deletedWishlist = await Wishlist.findByIdAndDelete(itemId);
+//     console.log('Deleted Wishlist:', deletedWishlist);
+//     return deletedWishlist;
+//   } catch (error) {
+//     console.error('Error in wishlistById:', error.message);
+//     throw error;
+//   }
+// }
+
+app.delete('/wishlist/:wishlistId/item/:productId', async (req, res) => {
+  try {
+    const { wishlistId, productId } = req.params;
+
+    console.log('DELETE request received - Wishlist ID:', wishlistId, 'Product ID:', productId);
+
+    if (!ObjectId.isValid(wishlistId) || !ObjectId.isValid(productId)) {
+      return res.status(400).json({ error: 'Invalid Wishlist ID or Product ID' });
+    }
+
+    const updatedWishlist = await Wishlist.findByIdAndUpdate(
+      wishlistId,
+      { $pull: { items: { productId: new ObjectId(productId) } } }, // Convert to ObjectId
+      { new: true }
+    ).populate('items.productId');
+
+    console.log('Updated Wishlist:', updatedWishlist);
+
+    if (!updatedWishlist) {
+      console.log('No wishlist found for ID:', wishlistId);
+      return res.status(404).json({ error: 'Wishlist not found' });
+    }
+
+    // Check if the item was removed
+    const itemStillExists = updatedWishlist.items.some(
+      (item) => item.productId.toString() === productId
+    );
+    if (itemStillExists) {
+      console.log('Item with Product ID:', productId, 'not removed from Wishlist:', wishlistId);
+      return res.status(404).json({ error: 'Product not found in wishlist or not removed' });
+    }
+
+    res.status(200).json({
+      message: 'Item removed from wishlist successfully',
+      updatedWishlist: updatedWishlist,
+    });
+  } catch (error) {
+    console.error('Error in DELETE route:', error.message);
+    res.status(500).json({ error: 'Failed to remove item from wishlist', details: error.message });
   }
 });
 
 
+// app.delete("/wishlist/:itemId", async (req, res) => {
+//   try {
+//     const { itemId } = req.params;
+//     const updatedWishlist = await removeFromWishlist(itemId);
+//     res.status(200).json({
+//       message: "Item removed from wishlist successfully!",
+//       wishlist: updatedWishlist,
+//     });
+//   } catch (error) {
+//     if (error.message === "Wishlist not found.") {
+//       res.status(404).json({ error: error.message });
+//     } else {
+//       res.status(500).json({ error: "Failed to remove item from wishlist." });
+//     }
+//   }
+// });
 
 const PORT = 3000;
 app.listen(PORT, () => {
