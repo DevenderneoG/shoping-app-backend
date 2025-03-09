@@ -451,42 +451,112 @@ app.delete('/cart/:cartId/item/:productId', async (req, res) => {
   }
 });
 
+// app.patch('/cart/:cartId/item/:productId', async (req, res) => {
+//   try {
+//       const { cartId, productId } = req.params;
+//       const { quantity } = req.body;
+
+//       console.log('PATCH request received - Cart ID:', cartId, 'Product ID:', productId, 'New Quantity:', quantity);
+
+//       // Validate IDs and quantity
+//       if (!mongoose.Types.ObjectId.isValid(cartId) || !mongoose.Types.ObjectId.isValid(productId)) {
+//           return res.status(400).json({ error: 'Invalid Cart ID or Product ID' });
+//       }
+
+//       if (!quantity || isNaN(quantity) || quantity < 1) {
+//           return res.status(400).json({ error: 'Quantity must be a number greater than 0' });
+//       }
+
+//       const updatedCart = await Cart.findOneAndUpdate(
+//           { _id: cartId, 'items.productId': productId },
+//           { $set: { 'items.$.quantity': quantity } },
+//           { new: true }
+//       ).populate('items.productId');
+
+//       console.log('Updated Cart:', updatedCart);
+
+//       if (!updatedCart) {
+//           console.log('No cart found or item not in cart - Cart ID:', cartId, 'Product ID:', productId);
+//           return res.status(404).json({ error: 'Cart or product not found' });
+//       }
+
+//       res.status(200).json({
+//           message: 'Cart item quantity updated successfully',
+//           updatedCart: updatedCart,
+//       });
+//   } catch (error) {
+//       console.error('Error in PATCH cart route:', error.message);
+//       res.status(500).json({ error: 'Failed to update cart item quantity', details: error.message });
+//   }
+// });
+
+async function updateCartItemQuantity(cartId, productId, quantity) {
+  try {
+    // Validate inputs
+    if (!mongoose.Types.ObjectId.isValid(cartId)) {
+      throw new Error('Invalid Cart ID');
+    }
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      throw new Error('Invalid Product ID');
+    }
+    if (!quantity || isNaN(quantity) || quantity < 1) {
+      throw new Error('Quantity must be a number greater than 0');
+    }
+
+    // Check if cart exists
+    const cart = await Cart.findById(cartId);
+    if (!cart) {
+      throw new Error('Cart not found');
+    }
+
+    // Check if product exists in cart
+    const itemExists = cart.items.some(item => item.productId.toString() === productId);
+    if (!itemExists) {
+      throw new Error('Product not found in cart');
+    }
+
+    // Update the quantity
+    const updatedCart = await Cart.findOneAndUpdate(
+      { _id: cartId, 'items.productId': productId },
+      { $set: { 'items.$.quantity': quantity } },
+      { new: true, runValidators: true }
+    ).populate('items.productId');
+
+    return updatedCart;
+  } catch (error) {
+    console.error('Error in updating cart item quantity:', error.message);
+    throw error; // Re-throw to let the caller handle it
+  }
+}
+
+// PATCH endpoint for updating cart item quantity
 app.patch('/cart/:cartId/item/:productId', async (req, res) => {
   try {
-      const { cartId, productId } = req.params;
-      const { quantity } = req.body;
+    const { cartId, productId } = req.params;
+    const { quantity } = req.body;
 
-      console.log('PATCH request received - Cart ID:', cartId, 'Product ID:', productId, 'New Quantity:', quantity);
+    console.log('PATCH request received - Cart ID:', cartId, 'Product ID:', productId, 'New Quantity:', quantity);
 
-      // Validate IDs and quantity
-      if (!mongoose.Types.ObjectId.isValid(cartId) || !mongoose.Types.ObjectId.isValid(productId)) {
-          return res.status(400).json({ error: 'Invalid Cart ID or Product ID' });
-      }
+    const updatedCart = await updateCartItemQuantity(cartId, productId, quantity);
 
-      if (!quantity || isNaN(quantity) || quantity < 1) {
-          return res.status(400).json({ error: 'Quantity must be a number greater than 0' });
-      }
-
-      const updatedCart = await Cart.findOneAndUpdate(
-          { _id: cartId, 'items.productId': productId },
-          { $set: { 'items.$.quantity': quantity } },
-          { new: true }
-      ).populate('items.productId');
-
-      console.log('Updated Cart:', updatedCart);
-
-      if (!updatedCart) {
-          console.log('No cart found or item not in cart - Cart ID:', cartId, 'Product ID:', productId);
-          return res.status(404).json({ error: 'Cart or product not found' });
-      }
-
-      res.status(200).json({
-          message: 'Cart item quantity updated successfully',
-          updatedCart: updatedCart,
-      });
+    res.status(200).json({
+      message: 'Cart item quantity updated successfully',
+      updatedCart: updatedCart
+    });
   } catch (error) {
-      console.error('Error in PATCH cart route:', error.message);
-      res.status(500).json({ error: 'Failed to update cart item quantity', details: error.message });
+    if (error.message === 'Invalid Cart ID' || error.message === 'Invalid Product ID') {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error.message === 'Quantity must be a number greater than 0') {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error.message === 'Cart not found' || error.message === 'Product not found in cart') {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({
+      error: 'Failed to update cart item quantity',
+      details: error.message
+    });
   }
 });
 
