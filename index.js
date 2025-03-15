@@ -15,6 +15,7 @@ const { initializeDatabase } = require("./db/db.connect");
 const Product = require("./models/product.models");
 const Wishlist = require("./models/wishlist.models");
 const Cart = require("./models/cart.models");
+const Address = require("./models/address.models");
 
 app.use(express.json());
 
@@ -149,27 +150,6 @@ app.get("/categories", async (req, res) => {
   }
 });
 
-// async function readCategoriesById(categoryId) {
-//   try {
-//     const categoryById = await Product.findOne({ category: categoryId });
-//     return categoryById;
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
-
-// app.get("/categories/:categoryId", async (req, res) => {
-//   try {
-//     const categoryById = await readCategoriesById(req.params.categoryId);
-//     if (categoryById) {
-//       res.json(categoryById);
-//     } else {
-//       res.status(404).json({ error: "No product found." });
-//     }
-//   } catch (error) {
-//     res.status(500).json({ error: "Failed to fetch product." });
-//   }
-// });
 
 async function getCategoryData(categoryId) {
   try {
@@ -451,44 +431,7 @@ app.delete('/cart/:cartId/item/:productId', async (req, res) => {
   }
 });
 
-// app.patch('/cart/:cartId/item/:productId', async (req, res) => {
-//   try {
-//       const { cartId, productId } = req.params;
-//       const { quantity } = req.body;
 
-//       console.log('PATCH request received - Cart ID:', cartId, 'Product ID:', productId, 'New Quantity:', quantity);
-
-//       // Validate IDs and quantity
-//       if (!mongoose.Types.ObjectId.isValid(cartId) || !mongoose.Types.ObjectId.isValid(productId)) {
-//           return res.status(400).json({ error: 'Invalid Cart ID or Product ID' });
-//       }
-
-//       if (!quantity || isNaN(quantity) || quantity < 1) {
-//           return res.status(400).json({ error: 'Quantity must be a number greater than 0' });
-//       }
-
-//       const updatedCart = await Cart.findOneAndUpdate(
-//           { _id: cartId, 'items.productId': productId },
-//           { $set: { 'items.$.quantity': quantity } },
-//           { new: true }
-//       ).populate('items.productId');
-
-//       console.log('Updated Cart:', updatedCart);
-
-//       if (!updatedCart) {
-//           console.log('No cart found or item not in cart - Cart ID:', cartId, 'Product ID:', productId);
-//           return res.status(404).json({ error: 'Cart or product not found' });
-//       }
-
-//       res.status(200).json({
-//           message: 'Cart item quantity updated successfully',
-//           updatedCart: updatedCart,
-//       });
-//   } catch (error) {
-//       console.error('Error in PATCH cart route:', error.message);
-//       res.status(500).json({ error: 'Failed to update cart item quantity', details: error.message });
-//   }
-// });
 
 async function updateCartItemQuantity(cartId, productId, quantity) {
   try {
@@ -559,6 +502,100 @@ app.patch('/cart/:cartId/item/:productId', async (req, res) => {
     });
   }
 });
+
+
+/* Address Endpoint  */
+
+async function createAddress(newAddress) {
+  try {
+    const address = new Address(newAddress);
+    const saveAddress = await address.save();
+    console.log("New Address Data", saveAddress);
+  } catch (error) {
+    throw error;
+  }
+}
+
+app.post("/address", async (req, res) => {
+  try {
+    const savedAddress = await createAddress(req.body);
+    res
+      .status(201)
+      .json({ message: "Address Added successfully.", address: savedAddress });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to add address." });
+  }
+});
+
+
+async function readAllAddress() {
+  try {
+    const readAddress = await Address.find();
+    return readAddress;
+  } catch (error) {
+    throw error;
+  }
+}
+
+app.get("/address", async (req, res) => {
+  try {
+    const address = await readAllAddress();
+    if (address.length != 0) {
+      res.json(address);
+    } else {
+      res.status(404).json({ error: "No address found." });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch address." });
+  }
+})
+
+
+
+async function readAddressById(addressId, dataToUpdate) {
+  try {
+      const addressUpdate = await Address.findByIdAndUpdate(addressId, dataToUpdate, {new: true});
+      return addressUpdate;
+  } catch (error) {
+      console.log("Error in updating Address data", error);
+  }
+}
+
+app.post("/address/:addressId", async (req, res) => {
+  try {
+     const updateAddressById = await readAddressById(req.params.addressId, req.body) ;
+     if(updateAddressById) {
+      res.status(200).json({message: "Address updated successfully.", updateAddressById: updateAddressById})
+     } else {
+      res.status(404).json({error: "Address does not exist."})
+     }
+  } catch (error) {
+      res.status(500).json({error: "Failed to update Address."}) 
+  }
+})
+
+async function deleteAddressById (addressId) {
+  try {
+    const deleteAddress = await Address.findByIdAndDelete(addressId);
+    return deleteAddress;
+  } catch (error) {
+    console.log("Error in Deleting Address data", error)
+  }
+}
+
+app.delete("/address/:addressId", async (req, res) => {
+  try {
+    const deletedAddress = await deleteAddressById(req.params.addressId);
+    if (deletedAddress) {
+      res.status(200).json({message: "Address deleted successfully."})
+    } else {
+      res.status(404).json({error: "Address not found"});
+    }
+  } catch (error) {
+    res.status(500).json({error: "Failed to delete Address."})
+  }
+})
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
