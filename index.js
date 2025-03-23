@@ -561,18 +561,34 @@ async function readAddressById(addressId, dataToUpdate) {
   }
 }
 
-app.post("/address/:addressId", async (req, res) => {
+// app.put("/address/:addressId", async (req, res) => {
+//   try {
+//      const updateAddressById = await readAddressById(req.params.addressId, req.body) ;
+//      if(updateAddressById) {
+//       res.status(200).json({message: "Address updated successfully.", updateAddressById: updateAddressById})
+//      } else {
+//       res.status(404).json({error: "Address does not exist."})
+//      }
+//   } catch (error) {
+//       res.status(500).json({error: "Failed to update Address."}) 
+//   }
+// })
+
+app.put("/address/:addressId", async (req, res) => {
   try {
-     const updateAddressById = await readAddressById(req.params.addressId, req.body) ;
-     if(updateAddressById) {
-      res.status(200).json({message: "Address updated successfully.", updateAddressById: updateAddressById})
-     } else {
-      res.status(404).json({error: "Address does not exist."})
-     }
+    const updateAddressById = await readAddressById(req.params.addressId, req.body);
+    if (updateAddressById) {
+      res.status(200).json({
+        message: "Address updated successfully.",
+        updateAddressById: updateAddressById,
+      });
+    } else {
+      res.status(404).json({ error: "Address does not exist." });
+    }
   } catch (error) {
-      res.status(500).json({error: "Failed to update Address."}) 
+    res.status(500).json({ error: "Failed to update address." });
   }
-})
+});
 
 async function deleteAddressById (addressId) {
   try {
