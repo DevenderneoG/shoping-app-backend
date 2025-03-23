@@ -552,14 +552,14 @@ app.get("/address", async (req, res) => {
 
 
 
-// async function readAddressById(addressId, dataToUpdate) {
-//   try {
-//       const addressUpdate = await Address.findByIdAndUpdate(addressId, dataToUpdate, {new: true});
-//       return addressUpdate;
-//   } catch (error) {
-//       console.log("Error in updating Address data", error);
-//   }
-// }
+async function readAddressById(addressId, dataToUpdate) {
+  try {
+      const addressUpdate = await Address.findByIdAndUpdate(addressId, dataToUpdate, {new: true});
+      return addressUpdate;
+  } catch (error) {
+      console.log("Error in updating Address data", error);
+  }
+}
 
 // app.put("/address/:addressId", async (req, res) => {
 //   try {
