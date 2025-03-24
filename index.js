@@ -616,47 +616,47 @@ app.delete("/address/:addressId", async (req, res) => {
 
 /* User Address  */
 
-async function createUser(newUser) {
+async function createCustomer(newCustomer) {
   try {
-    const user = new User(newUser);
-    const saveUser = await user.save();
-    console.log("New User Data", saveUser);
+    const customer = new User(newCustomer);
+    const saveCustomer = await customer.save();
+    console.log("New Customer Data", saveCustomer);
   } catch (error) {
     throw error;
   }
 }
 
-app.post("/users", async (req, res) => {
+app.post("/customer", async (req, res) => {
   try {
-    const savedUser = await createUser(req.body);
+    const savedCustomer = await createCustomer(req.body);
     res
       .status(201)
-      .json({ message: "User Added successfully.", user: savedUser });
+      .json({ message: "Customer Added successfully.", customer: savedCustomer });
   } catch (error) {
-    res.status(500).json({ error: "Failed to add User." });
+    res.status(500).json({ error: "Failed to add Customer." });
   }
 });
 
 
-async function readAllUser() {
+async function readAllCustomer() {
   try {
-    const readUser = await User.find();
-    return readUser;
+    const readCustomer = await User.find();
+    return readCustomer;
   } catch (error) {
     throw error;
   }
 }
 
-app.get("/users", async (req, res) => {
+app.get("/customer", async (req, res) => {
   try {
-    const users = await readAllUser();
-    if (users.length != 0) {
-      res.json(users);
+    const customers = await readAllCustomer();
+    if (customers.length != 0) {
+      res.json(customers);
     } else {
-      res.status(404).json({ error: "No users found." });
+      res.status(404).json({ error: "No customers found." });
     }
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch users." });
+    res.status(500).json({ error: "Failed to fetch customers." });
   }
 })
 
