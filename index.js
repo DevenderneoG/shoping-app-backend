@@ -16,6 +16,7 @@ const Product = require("./models/product.models");
 const Wishlist = require("./models/wishlist.models");
 const Cart = require("./models/cart.models");
 const Address = require("./models/address.models");
+const User = require("./models/users.models");
 
 app.use(express.json());
 
@@ -550,17 +551,6 @@ app.get("/address", async (req, res) => {
   }
 })
 
-
-
-async function readAddressById(addressId, dataToUpdate) {
-  try {
-      const addressUpdate = await Address.findByIdAndUpdate(addressId, dataToUpdate, {new: true});
-      return addressUpdate;
-  } catch (error) {
-      console.log("Error in updating Address data", error);
-  }
-}
-
 // app.put("/address/:addressId", async (req, res) => {
 //   try {
 //      const updateAddressById = await readAddressById(req.params.addressId, req.body) ;
@@ -573,6 +563,17 @@ async function readAddressById(addressId, dataToUpdate) {
 //       res.status(500).json({error: "Failed to update Address."}) 
 //   }
 // })
+
+async function readAddressById(addressId, dataToUpdate) {
+  try {
+      const addressUpdate = await Address.findByIdAndUpdate(addressId, dataToUpdate, {new: true});
+      return addressUpdate;
+  } catch (error) {
+      console.log("Error in updating Address data", error);
+  }
+}
+
+
 
 app.put("/address/:addressId", async (req, res) => {
   try {
@@ -609,6 +610,53 @@ app.delete("/address/:addressId", async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({error: "Failed to delete Address."})
+  }
+})
+
+
+/* User Address  */
+
+async function createCustomer(newCustomer) {
+  try {
+    const customer = new User(newCustomer);
+    const saveCustomer = await customer.save();
+    console.log("New Customer Data", saveCustomer);
+  } catch (error) {
+    throw error;
+  }
+}
+
+app.post("/customer", async (req, res) => {
+  try {
+    const savedCustomer = await createCustomer(req.body);
+    res
+      .status(201)
+      .json({ message: "Customer Added successfully.", customer: savedCustomer });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to add Customer." });
+  }
+});
+
+
+async function readAllCustomer() {
+  try {
+    const readCustomer = await User.find();
+    return readCustomer;
+  } catch (error) {
+    throw error;
+  }
+}
+
+app.get("/customer", async (req, res) => {
+  try {
+    const customers = await readAllCustomer();
+    if (customers.length != 0) {
+      res.json(customers);
+    } else {
+      res.status(404).json({ error: "No customers found." });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch customers." });
   }
 })
 
