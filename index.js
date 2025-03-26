@@ -35,7 +35,7 @@ async function createProduct(newProduct) {
   try {
     const product = new Product(newProduct);
     const saveProduct = await product.save();
-    console.log("New Hotel Data", saveProduct);
+    console.log("New Product Data", saveProduct);
   } catch (error) {
     throw error;
   }
